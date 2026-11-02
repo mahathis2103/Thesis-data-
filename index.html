@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>T2DM Data</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="T2DM Data">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<script src="xlsx.mini.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1d2330;--mut:#667085;--line:#dfe3ea;--acc:#0f766e;--acct:#fff;--warn:#b42318;--ok:#067647;--calc:#eef6f5;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--card:#1b212b;--text:#e8ebf0;--mut:#9aa3b2;--line:#2c3441;--acc:#2dd4bf;--acct:#06201d;--warn:#f97066;--ok:#47cd89;--calc:#16302d;color-scheme:dark}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:14px}
+h1{font-size:18px;margin:4px 0 2px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select,textarea{width:100%;font:inherit;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
+input[readonly]{background:var(--calc);font-weight:600}
+.full{grid-column:1/-1}
+.flag{font-size:12px;margin-top:3px;min-height:16px}
+.flag.hi{color:var(--warn)}.flag.lo{color:var(--ok)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-weight:600;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+button.p{background:var(--acc);color:var(--acct);border-color:var(--acc)}
+button.d{color:var(--warn)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+tr.r{cursor:pointer}
+.msg{font-size:13px;color:var(--mut);margin-top:8px}
+.cnt{display:flex;gap:10px;font-size:13px;color:var(--mut);margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>T2DM Anthropometry &amp; Lipid Study</h1>
+<div class="sub">Enter the raw values; BMI, WHR, WHtR, non-HDL and glycaemic group calculate automatically.</div>
+
+<div class="card"><h2>Participant</h2><div class="grid">
+<div><label>Study ID *</label><input id="sid" placeholder="e.g. 001"></div>
+<div><label>Date of entry</label><input id="date" type="date"></div>
+<div><label>Age (years)</label><input id="age" type="number" inputmode="numeric"></div>
+<div><label>Sex *</label><select id="sex"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+<div><label>Duration of T2DM (years)</label><input id="dur" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>Hypertension</label><select id="htn"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+</div></div>
+
+<div class="card"><h2>Eligibility (age 40–70, T2DM)</h2><div class="grid">
+<div class="full"><label>Written informed consent taken *</label><select id="consent"><option value="">Select</option><option>Yes</option><option>No</option></select></div>
+<div><label>Lipid-lowering drug ≥6 mo</label><select id="ex_lld"><option>No</option><option>Yes</option></select></div>
+<div><label>CKD / nephrotic syndrome</label><select id="ex_ckd"><option>No</option><option>Yes</option></select></div>
+<div><label>Hypothyroidism</label><select id="ex_hypo"><option>No</option><option>Yes</option></select></div>
+<div><label>Pregnancy</label><select id="ex_preg"><option>No</option><option>Yes</option></select></div>
+<div><label>Chronic glucocorticoid use</label><select id="ex_ster"><option>No</option><option>Yes</option></select></div>
+<div><label>Chronic liver disease</label><select id="ex_liver"><option>No</option><option>Yes</option></select></div>
+<div><label>Visible neck mass</label><select id="ex_neck"><option>No</option><option>Yes</option></select></div>
+<div><label>Eligibility – auto</label><input id="elig" readonly></div>
+<div class="full"><div class="flag" id="f_el"></div></div>
+</div></div>
+
+<div class="card"><h2>Anthropometry</h2><div class="grid">
+<div><label>Weight (kg)</label><input id="wt" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>Height (cm)</label><input id="ht" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>Waist circumference (cm)</label><input id="wc" type="number" inputmode="decimal" step="0.1"><div class="flag" id="f_wc"></div></div>
+<div><label>Hip circumference (cm)</label><input id="hc" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>Neck circumference (cm)</label><input id="nc" type="number" inputmode="decimal" step="0.1"><div class="flag" id="f_nc"></div></div>
+<div></div>
+<div><label>BMI (kg/m²) – auto</label><input id="bmi" readonly><div class="flag" id="f_bmi"></div></div>
+<div><label>Waist-hip ratio – auto</label><input id="whr" readonly><div class="flag" id="f_whr"></div></div>
+<div><label>Waist-height ratio – auto</label><input id="whtr" readonly><div class="flag" id="f_whtr"></div></div>
+<div><label>WHR risk (WHO) – auto</label><input id="whor" readonly></div>
+</div></div>
+
+<div class="card"><h2>Biochemistry</h2><div class="grid">
+<div><label>HbA1c (%)</label><input id="hba" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>Glycaemic group – auto</label><input id="grp" readonly></div>
+<div><label>Total cholesterol (mg/dL)</label><input id="tc" type="number" inputmode="decimal"></div>
+<div><label>Triglycerides (mg/dL)</label><input id="tg" type="number" inputmode="decimal"></div>
+<div><label>HDL (mg/dL)</label><input id="hdl" type="number" inputmode="decimal"></div>
+<div><label>LDL (mg/dL)</label><input id="ldl" type="number" inputmode="decimal"></div>
+<div><label>VLDL (mg/dL)</label><input id="vldl" type="number" inputmode="decimal"></div>
+<div><label>Non-HDL (mg/dL) – auto</label><input id="nonhdl" readonly></div>
+<div><label>TC / HDL-C – auto</label><input id="tchdl" readonly></div>
+<div><label>LDL-C / HDL-C – auto</label><input id="ldlhdl" readonly></div>
+<div><label>TG / HDL-C – auto</label><input id="tghdl" readonly></div>
+<div></div>
+<div><label>ApoB (mg/dL)</label><input id="apob" type="number" inputmode="decimal"></div>
+<div><label>Lp(a) (mg/dL)</label><input id="lpa" type="number" inputmode="decimal"></div>
+<div class="full"><label>Remarks</label><textarea id="rem" rows="2"></textarea></div>
+</div></div>
+
+<div class="btns" style="margin-bottom:12px">
+<button class="p" id="save">Save record</button>
+<button id="clear">New / clear form</button>
+<button class="d" id="del" style="display:none">Delete this record</button>
+</div>
+<div class="msg" id="msg"></div>
+
+<div class="card" style="margin-top:12px"><h2>Records</h2>
+<div class="cnt"><span id="n">0 records</span><span id="g"></span></div>
+<div class="tw"><table id="tbl"><thead><tr><th>ID</th><th>Age</th><th>Sex</th><th>BMI</th><th>WHR</th><th>WHtR</th><th>HbA1c</th><th>Group</th><th>Eligible</th></tr></thead><tbody></tbody></table></div>
+<div class="btns" style="margin-top:10px"><button class="p" id="xl">Export to Excel</button></div>
+<div class="msg">Tap a row to edit it. Data is stored in this browser on this device only, so export to Excel regularly as a backup.</div>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const KEY="t2dm_study_records_v1";
+let recs=[],editing=null,mem=null;
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):[]}catch(e){return mem||[]}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(recs))}catch(e){mem=recs;$("msg").textContent="Browser storage unavailable: records will be lost on closing. Export to Excel often."}}
+const num=id=>{const v=parseFloat($(id).value);return isFinite(v)?v:null};
+const r=(v,d)=>v==null?"":+v.toFixed(d);
+function setFlag(id,txt,hi){const e=$(id);e.textContent=txt||"";e.className="flag "+(txt?(hi?"hi":"lo"):"")}
+
+function calc(){
+  const wt=num("wt"),ht=num("ht"),wc=num("wc"),hc=num("hc"),nc=num("nc"),hba=num("hba"),tc=num("tc"),hdl=num("hdl"),sex=$("sex").value;
+  const bmi=(wt&&ht)?wt/Math.pow(ht/100,2):null;
+  const whr=(wc&&hc)?wc/hc:null;
+  const whtr=(wc&&ht)?wc/ht:null;
+  $("bmi").value=r(bmi,1);$("whr").value=r(whr,2);$("whtr").value=r(whtr,2);
+  const ldl=num("ldl"),tg=num("tg"),rt=(a,b)=>(a!=null&&b)?r(a/b,2):"";
+  $("nonhdl").value=(tc!=null&&hdl!=null)?r(tc-hdl,0):"";
+  $("tchdl").value=rt(tc,hdl);$("ldlhdl").value=rt(ldl,hdl);$("tghdl").value=rt(tg,hdl);
+  const age=num("age"),why=[];
+  if($("consent").value==="No")why.push("no consent");
+  if(age!=null&&(age<40||age>70))why.push("age outside 40–70");
+  EXL.forEach(([k,t])=>{if($(k).value==="Yes")why.push(t)});
+  const ready=age!=null&&$("consent").value;
+  $("elig").value=!ready?"":(why.length?"Excluded":"Eligible");
+  setFlag("f_el",why.length?why.join(", "):"",true);
+  $("grp").value=hba==null?"":(hba<7?"Good control (<7%)":"Poor control (≥7%)");
+  let bc="";if(bmi!=null)bc=bmi<18.5?"Underweight":bmi<23?"Normal":bmi<25?"Overweight":"Obese";
+  setFlag("f_bmi",bc,bc==="Overweight"||bc==="Obese");
+  const m=sex==="Male",f=sex==="Female",known=m||f;
+  setFlag("f_wc",wc&&known?((m?wc>90:wc>80)?"Above Indian cut-off":"Within cut-off"):"",wc&&known&&(m?wc>90:wc>80));
+  setFlag("f_whr",whr&&known?((m?whr>0.9:whr>0.85)?"Above Indian cut-off":"Within cut-off"):"",whr&&known&&(m?whr>0.9:whr>0.85));
+  setFlag("f_nc",nc&&known?((m?nc>35.25:nc>34.25)?"Above cut-off":"Within cut-off"):"",nc&&known&&(m?nc>35.25:nc>34.25));
+  setFlag("f_whtr",whtr!=null?(whtr>0.5?"Above 0.5 (obesity)":"≤ 0.5"):"",whtr>0.5);
+  let wr="";
+  if(whr!=null&&known){const x=+whr.toFixed(2);wr=f?(x<=0.80?"Low":x<=0.85?"Moderate":"High"):(x<=0.95?"Low":x<=1.0?"Moderate":"High")}
+  $("whor").value=wr;
+}
+document.querySelectorAll("input,select").forEach(e=>e.addEventListener("input",calc));
+
+const EXL=[["ex_lld","on lipid-lowering drug"],["ex_ckd","CKD/nephrotic"],["ex_hypo","hypothyroidism"],["ex_preg","pregnancy"],["ex_ster","chronic steroids"],["ex_liver","chronic liver disease"],["ex_neck","neck mass"]];
+const F=["sid","date","age","sex","dur","htn","consent","ex_lld","ex_ckd","ex_hypo","ex_preg","ex_ster","ex_liver","ex_neck","wt","ht","wc","hc","nc","hba","tc","tg","hdl","ldl","vldl","apob","lpa","rem"];
+const C=["bmi","whr","whtr","whor","nonhdl","tchdl","ldlhdl","tghdl","grp","elig"];
+function formData(){const o={};[...F,...C].forEach(k=>o[k]=$(k).value);return o}
+function clearForm(){F.forEach(k=>$(k).value="");EXL.forEach(([k])=>$(k).value="No");$("date").value=new Date().toISOString().slice(0,10);editing=null;$("del").style.display="none";$("save").textContent="Save record";calc()}
+
+$("save").onclick=()=>{
+  const o=formData();
+  if(!o.sid.trim()||!o.sex||!o.age||!o.consent){$("msg").textContent="Study ID, Age, Sex and Consent are required.";return}
+  const dup=recs.findIndex(x=>x.sid===o.sid.trim());
+  if(editing==null&&dup>=0){$("msg").textContent="Study ID already exists. Tap its row to edit instead.";return}
+  o.sid=o.sid.trim();
+  if(editing!=null){const i=recs.findIndex(x=>x.sid===editing);recs[i]=o}else recs.push(o);
+  persist();render();$("msg").textContent="Saved "+o.sid+".";clearForm();
+};
+$("clear").onclick=()=>{clearForm();$("msg").textContent=""};
+$("del").onclick=()=>{
+  if(editing==null)return;
+  if(!confirm("Delete record "+editing+"?"))return;
+  recs=recs.filter(x=>x.sid!==editing);persist();render();clearForm();$("msg").textContent="Record deleted.";
+};
+function render(){
+  const tb=$("tbl").querySelector("tbody");tb.innerHTML="";
+  recs.forEach(x=>{
+    const tr=document.createElement("tr");tr.className="r";
+    [x.sid,x.age,x.sex,x.bmi,x.whr,x.whtr,x.hba,x.grp?(x.grp.indexOf("Good")===0?"Good":"Poor"):"",x.elig||""].forEach(v=>{const td=document.createElement("td");td.textContent=v==null?"":v;tr.appendChild(td)});
+    tr.onclick=()=>{F.forEach(k=>$(k).value=x[k]||"");EXL.forEach(([k])=>{if(!x[k])$(k).value="No"});editing=x.sid;$("del").style.display="";$("save").textContent="Update record";calc();window.scrollTo({top:0,behavior:"smooth"})};
+    tb.appendChild(tr);
+  });
+  const good=recs.filter(x=>x.grp&&x.grp.indexOf("Good")===0).length,poor=recs.filter(x=>x.grp&&x.grp.indexOf("Poor")===0).length;
+  $("n").textContent=recs.length+" record"+(recs.length===1?"":"s");
+  $("g").textContent="Good: "+good+" | Poor: "+poor;
+}
+
+$("xl").onclick=async()=>{
+  if(!recs.length){$("msg").textContent="No records to export yet.";return}
+  if(typeof XLSX==="undefined"){$("msg").textContent="Excel library did not load. Check your connection and reload.";return}
+  const D=[
+["Study ID","sid","Text","Patient identifier"],
+["Date of entry","date","Date",""],
+["Age (yrs)","age","Years","Inclusion 40–70"],
+["Sex","sex","Male/Female",""],
+["T2DM duration (yrs)","dur","Years",""],
+["Hypertension","htn","Yes/No",""],
+["Consent","consent","Yes/No","Written informed consent"],
+["On lipid-lowering drug ≥6 mo","ex_lld","Yes/No","Exclusion"],
+["CKD/nephrotic","ex_ckd","Yes/No","Exclusion"],
+["Hypothyroidism","ex_hypo","Yes/No","Exclusion"],
+["Pregnancy","ex_preg","Yes/No","Exclusion"],
+["Chronic glucocorticoids","ex_ster","Yes/No","Exclusion"],
+["Chronic liver disease","ex_liver","Yes/No","Exclusion"],
+["Neck mass","ex_neck","Yes/No","Exclusion"],
+["Eligibility","elig","Eligible/Excluded","Auto"],
+["Weight (kg)","wt","kg","Measured"],
+["Height (cm)","ht","cm","Measured"],
+["Waist circ (cm)","wc","cm","Midway between lower costal margin and iliac crest"],
+["Hip circ (cm)","hc","cm","Widest part of hips"],
+["Neck circ (cm)","nc","cm","Just below Adam's apple"],
+["BMI (kg/m2)","bmi","kg/m2","Auto: weight / height(m)^2"],
+["WHR","whr","ratio","Auto: waist / hip"],
+["WHR risk (WHO)","whor","Low/Moderate/High","Auto"],
+["Waist-height ratio","whtr","ratio","Auto: waist / height"],
+["HbA1c (%)","hba","%","HPLC"],
+["Glycaemic group","grp","Good/Poor","Auto: HbA1c <7 good, >=7 poor"],
+["Total chol (mg/dL)","tc","mg/dL","Fasting"],
+["TG (mg/dL)","tg","mg/dL","Fasting"],
+["HDL-C (mg/dL)","hdl","mg/dL","Fasting"],
+["LDL-C (mg/dL)","ldl","mg/dL","Fasting"],
+["VLDL-C (mg/dL)","vldl","mg/dL","Fasting"],
+["Non-HDL-C (mg/dL)","nonhdl","mg/dL","Auto: TC - HDL"],
+["TC/HDL-C","tchdl","ratio","Auto"],
+["LDL-C/HDL-C","ldlhdl","ratio","Auto"],
+["TG/HDL-C","tghdl","ratio","Auto"],
+["ApoB (mg/dL)","apob","mg/dL","Immunoturbidimetry"],
+["Lp(a) (mg/dL)","lpa","mg/dL","Immunoturbidimetry"],
+["Remarks","rem","Text",""]];
+  const H=D.map(d=>d[0]),K=D.map(d=>d[1]);
+  const textCols=["sid","date","sex","htn","consent","elig","whor","grp","rem","ex_lld","ex_ckd","ex_hypo","ex_preg","ex_ster","ex_liver","ex_neck"];
+  const rows=recs.map(x=>K.map(k=>{const v=x[k];if(v===""||v==null)return "";return textCols.indexOf(k)>=0?v:(isNaN(+v)?v:+v)}));
+  const ws=XLSX.utils.aoa_to_sheet([H].concat(rows));
+  ws["!cols"]=H.map(h=>({wch:Math.max(10,h.length+2)}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Data");
+  const wd=XLSX.utils.aoa_to_sheet([["Variable","Unit/type","Notes"]].concat(D.map(d=>[d[0],d[2],d[3]])));wd["!cols"]=[{wch:30},{wch:18},{wch:50}];
+  XLSX.utils.book_append_sheet(wb,wd,"Variables");
+  const buf=XLSX.write(wb,{type:"array",bookType:"xlsx"});
+  const name="T2DM_study_data_"+new Date().toISOString().slice(0,10)+".xlsx";
+  const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const file=new File([blob],name,{type:blob.type});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});$("msg").textContent="Excel file ready.";return}
+  }catch(e){if(e&&e.name==="AbortError"){$("msg").textContent="Export cancelled.";return}}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),10000);$("msg").textContent="Excel file downloaded.";
+};
+
+recs=load();render();clearForm();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
